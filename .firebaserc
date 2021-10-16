@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "flutter-community-website"
+  },
+  "targets": {
+    "flutter-community-website": {
+      "hosting": {
+        "pacman": [
+          "pacman-flutter-community"
+        ]
+      }
+    }
+  }
+}

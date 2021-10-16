@@ -1,0 +1,28 @@
+{
+  "name": "Pacman",
+  "short_name": "Pacman",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#FFE311",
+  "description": "Pacman Emulator in Flutter",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/pac-man-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/pac-man-256x256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/pac-man-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
