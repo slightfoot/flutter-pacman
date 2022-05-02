@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:pacman/win32_sound/functions.dart';
+import 'package:pacman/win32_sound/structs.dart';
 import 'package:semaphore/semaphore.dart';
 import 'package:win32/win32.dart';
 
@@ -167,15 +168,50 @@ class WaveOut {
     final waveFormatEx = format._allocatePcmWaveFormat();
     try {
       _throwOnError(
-            () =>
-            waveOutOpen(
-              phWo,
-              deviceId,
-              waveFormatEx,
-              _audioProcPtr.address,
-              _audioProcPort.sendPort.nativePort,
-              WAVE_ALLOWSYNC | CALLBACK_FUNCTION,
-            ),
+        () => waveOutOpen(
+          phWo,
+          deviceId,
+          waveFormatEx,
+          _audioProcPtr.address,
+          _audioProcPort.sendPort.nativePort,
+          WAVE_ALLOWSYNC | CALLBACK_FUNCTION,
+        ),
+      );
+      _hWaveOut = phWo.value;
+    } finally {
+      free(waveFormatEx);
+      free(phWo);
+    }
+  }
+
+  void openMp3() {
+    assert(_hWaveOut == null, 'Device closed');
+    final phWo = calloc<IntPtr>();
+    // http://damb.dk/snip/playmp3.html
+    // https://docs.microsoft.com/en-us/windows/win32/api/mmreg/ns-mmreg-mpeglayer3waveformat
+    final waveFormatEx = calloc<MPEGLAYER3WAVEFORMAT>();
+    waveFormatEx.ref
+      ..wFormatTag = WAVE_FORMAT_MPEGLAYER3
+      ..nChannels = 1
+      ..nSamplesPerSec = 22050 // hz
+      ..nBlockAlign = 1
+      ..wBitsPerSample = 0
+      ..cbSize = 12 // MPEGLAYER3_WFX_EXTRA_BYTES
+      ..wID = 1 // MPEGLAYER3_ID_MPEG
+      ..fdwFlags = 2 // MPEGLAYER3_FLAG_PADDING_OFF
+      ..nAvgBytesPerSec = 64 * (1024 ~/ 8) // 64kbps
+      ..nBlockSize = 2048 // or 522
+      ..nFramesPerBlock = 1;
+    try {
+      _throwOnError(
+        () => waveOutOpen(
+          phWo,
+          deviceId,
+          waveFormatEx.cast(),
+          _audioProcPtr.address,
+          _audioProcPort.sendPort.nativePort,
+          WAVE_ALLOWSYNC | CALLBACK_FUNCTION,
+        ),
       );
       _hWaveOut = phWo.value;
     } finally {
