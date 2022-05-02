@@ -1,0 +1,5 @@
+LIBRARY audio_proc.dll
+
+EXPORTS
+AudioProc
+InitDartApiDL

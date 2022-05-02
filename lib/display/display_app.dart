@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:pacman/display/display.dart' as display;
 import 'package:pacman/emulator.dart';
+import 'package:pacman/win32_sound/win32_sound.dart';
 
 class Display extends StatefulWidget implements display.Display {
   const Display({
@@ -29,19 +30,20 @@ class _DisplayState extends display.DisplayState<Display> {
 
   double get fps => (_frameCount / (_elapsed.inMicroseconds / Duration.microsecondsPerSecond));
 
-  //final WaveOut device =
-  //    WaveOut(WAVE_MAPPER, bufferCount: 8, bufferSizeInBytes: (4 * (44100 ~/ 60)).toInt());
+  final WaveOut device = WaveOut(WAVE_MAPPER, bufferCount: 8, bufferSizeInBytes: 4 * (44100 ~/ 60));
 
   @override
   void initState() {
     super.initState();
-    //device.open(SupportedWaveFormat(0, 44100, 1, 32, WAVE_FORMAT_IEEE_FLOAT));
-    //device.volume = 0.00;
+    if (device.isFormatSupported(SupportedWaveFormat.formatFloat44kM32b)) {
+      device.open(SupportedWaveFormat.formatFloat44kM32b);
+      device.volume = 0.5;
+    }
   }
 
   @override
   void dispose() {
-    //device.dispose();
+    device.dispose();
     super.dispose();
   }
 
@@ -66,7 +68,7 @@ class _DisplayState extends display.DisplayState<Display> {
   @override
   void outputAudioFrame(Duration elapsed, Duration delta) {
     widget.emulator.renderSound(_audioFrame, 44100);
-    //device.write(_audioFrame.buffer.asUint8List());
+    device.write(_audioFrame.buffer.asUint8List());
   }
 
   Future<void> _render() async {
@@ -91,6 +93,7 @@ class _DisplayState extends display.DisplayState<Display> {
                     fit: BoxFit.contain,
                     child: RawImage(
                       image: image,
+                      filterQuality: FilterQuality.none,
                     ),
                   ),
                 ),

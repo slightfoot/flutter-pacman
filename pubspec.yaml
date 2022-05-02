@@ -8,8 +8,8 @@ environment:
 
 dependencies:
   z80: 0.1.0
-  win32:
-    path: ../win32/
+  win32: 2.5.2
+  semaphore: 0.1.4
   flutter:
     sdk: flutter
   flutter_web_plugins:
