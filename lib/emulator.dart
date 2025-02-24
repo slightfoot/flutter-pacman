@@ -104,20 +104,17 @@ const int SND_FREQ5 = 0x14;
 const int SND_VOL = 0x15;
 
 class ArcadeMachineEmu implements Z80Core {
-  ArcadeMachineEmu() {
-    _cpu = Z80CPU(this);
-    _ram = Uint8ClampedList(0x10000); // 64KB
-  }
+  ArcadeMachineEmu();
 
-  Z80CPU _cpu;
-  Uint8ClampedList _ram;
-  Uint8ClampedList _soundData;
-  List<int> _palette;
+  late final _cpu = Z80CPU(this);
+  late final _ram = Uint8ClampedList(0x10000); // 64KB
+  late Uint8ClampedList _soundData;
+  late List<int> _palette;
+
   int _cycles = 0;
   bool _paused = false;
-
   bool _muted = false;
-  double _masterVolume = 0.5;
+  double _masterVolume = 0.25;
 
   bool get paused => _paused;
 
@@ -337,8 +334,7 @@ class ArcadeMachineEmu implements Z80Core {
     } else if (key == LogicalKeyboardKey.audioVolumeDown ||
         key == LogicalKeyboardKey.numpadSubtract) {
       _masterVolume = (_masterVolume - 0.1).clamp(0.0, 1.0);
-    } else if (key == LogicalKeyboardKey.audioVolumeUp ||
-        key == LogicalKeyboardKey.numpadAdd) {
+    } else if (key == LogicalKeyboardKey.audioVolumeUp || key == LogicalKeyboardKey.numpadAdd) {
       _masterVolume = (_masterVolume + 0.1).clamp(0.0, 1.0);
     } else if (key == LogicalKeyboardKey.audioVolumeMute || //
         key == LogicalKeyboardKey.numpad0) {
@@ -398,7 +394,7 @@ class ArcadeMachineEmu implements Z80Core {
       baseReg += 5;
     }
     for (int i = 0; i < buf.length; i++) {
-      buf[i] /= 0xFF;
+      buf[i] /= 0xFF; // resample 8-bit to float
     }
   }
 

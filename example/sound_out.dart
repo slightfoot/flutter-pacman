@@ -4,6 +4,11 @@ import 'dart:math' as math;
 
 import 'package:pacman/win32_sound/win32_sound.dart';
 
+// win32 lib issues
+//
+// WAVEHDR.lpData is Utf8 when it should be Uint8
+// WAVEOUTCAPS._szPname should be Utf16 and name is null terminated
+
 Future<void> main() async {
   final count = WaveOut.deviceCount;
   for (var i = 0; i < count; i++) {

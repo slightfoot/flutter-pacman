@@ -1,8 +1,8 @@
-import 'dart:ui' as ui;
+import 'dart:ui_web';
 
 typedef PlatformViewFactory = dynamic Function(int viewId);
 
 bool registerViewFactory(String viewTypeId, PlatformViewFactory factory) {
   // ignore: undefined_prefixed_name
-  return ui.platformViewRegistry.registerViewFactory(viewTypeId, factory) as bool;
+  return platformViewRegistry.registerViewFactory(viewTypeId, factory);
 }

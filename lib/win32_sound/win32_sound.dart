@@ -7,7 +7,7 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:pacman/win32_sound/functions.dart';
 import 'package:pacman/win32_sound/structs.dart';
-import 'package:semaphore/semaphore.dart';
+import 'package:semaphore_plus/semaphore_plus.dart';
 import 'package:win32/win32.dart';
 
 import 'constants.dart';
@@ -23,15 +23,15 @@ int _throwOnError(_MmFunc func) {
   return mmError;
 }
 
-class _AudioProcResult extends Struct {
+final class _AudioProcResult extends Struct {
   @IntPtr()
-  int hWaveOut;
+  external int hWaveOut;
   @Uint32()
-  int uMsg;
+  external int uMsg;
   @IntPtr()
-  int dwParam1;
+  external int dwParam1;
   @IntPtr()
-  int dwParam2;
+  external int dwParam2;
 }
 
 class WaveOut {
@@ -40,7 +40,7 @@ class WaveOut {
   static int get deviceCount => waveOutGetNumDevs();
 
   static bool _audioProcSetup = false;
-  static Pointer<NativeFunction> _audioProcPtr;
+  static late Pointer<NativeFunction> _audioProcPtr;
 
   factory WaveOut(int deviceId, {int bufferCount = 4, int bufferSizeInBytes = 2048}) {
     if (!_audioProcSetup) {
@@ -48,8 +48,8 @@ class WaveOut {
       if (NativeApi.majorVersion == 2) (NativeApi.minorVersion >= 0);
       final dl = DynamicLibrary.open('audio_proc.dll');
       final initializeApi =
-      dl.lookupFunction<IntPtr Function(Pointer<Void>), int Function(Pointer<Void>)>(
-          "InitDartApiDL");
+          dl.lookupFunction<IntPtr Function(Pointer<Void>), int Function(Pointer<Void>)>(
+              "InitDartApiDL");
       final initResult = initializeApi(NativeApi.initializeApiDLData);
       if (initResult != 0) {
         throw 'Init failed';
@@ -72,25 +72,25 @@ class WaveOut {
     );
   }
 
-  WaveOut._(this.deviceId, this._waveOutCaps, this.waveFormats, this._bufferCount,
-      int _bufferSizeInBytes)
+  WaveOut._(
+      this.deviceId, this._waveOutCaps, this.waveFormats, this._bufferCount, int _bufferSizeInBytes)
       : _bufferSemaphore = LocalSemaphore(_bufferCount) {
     _audioProcSub = _audioProcPort.listen(_waveOutProc);
     _buffers = List.generate(
       _bufferCount,
-          (int index) => WaveBuffer(this, index, _bufferSizeInBytes),
+      (int index) => WaveBuffer(this, index, _bufferSizeInBytes),
     );
   }
 
   final _audioProcPort = ReceivePort();
   final int deviceId;
   final Pointer<WAVEOUTCAPS> _waveOutCaps;
-  final LocalSemaphore _bufferSemaphore;
-  StreamSubscription<dynamic> _audioProcSub;
-  List<WaveBuffer> _buffers;
+  late final LocalSemaphore _bufferSemaphore;
+  late StreamSubscription<dynamic> _audioProcSub;
+  late List<WaveBuffer> _buffers;
 
-  int _hWaveOut;
-  Completer<void> _closeCompleter;
+  int? _hWaveOut;
+  Completer<void>? _closeCompleter;
 
   final int _bufferCount;
   int _currentBuffer = 0;
@@ -226,16 +226,16 @@ class WaveOut {
       final result = _ptr.ref;
       switch (result.uMsg) {
         case MM_WOM_OPEN:
-        //print('device opened');
+          //print('device opened');
           break;
         case MM_WOM_DONE:
-        //WAVEHDR waveHdr = Pointer<WAVEHDR>.fromAddress(result.dwParam1).ref;
-        //print('buffer done ${waveHdr.dwUser}');
+          //WAVEHDR waveHdr = Pointer<WAVEHDR>.fromAddress(result.dwParam1).ref;
+          //print('buffer done ${waveHdr.dwUser}');
           _bufferSemaphore.release();
           break;
         case MM_WOM_CLOSE:
-        //print('device closed');
-          _closeCompleter.complete();
+          //print('device closed');
+          _closeCompleter?.complete();
           _hWaveOut = null;
           break;
       }
@@ -287,8 +287,8 @@ class WaveOut {
   Future<void> close() async {
     if (_hWaveOut != null) {
       _closeCompleter = Completer<void>();
-      _throwOnError(() => waveOutClose(_hWaveOut));
-      await _closeCompleter.future;
+      _throwOnError(() => waveOutClose(_hWaveOut!));
+      await _closeCompleter?.future;
     }
   }
 
@@ -305,7 +305,7 @@ class WaveOut {
     assert(supportsVolumeControl, 'Device does not support volume control.');
     final result = calloc<Uint32>();
     try {
-      _throwOnError(() => waveOutGetVolume(_hWaveOut, result));
+      _throwOnError(() => waveOutGetVolume(_hWaveOut!, result));
       final volume = LRVolume.from32bit(result.value);
       if (!supportsLRVolumeControl) {
         // https://docs.microsoft.com/en-us/windows/win32/api/mmeapi/nf-mmeapi-waveoutgetvolume
@@ -323,7 +323,7 @@ class WaveOut {
   set volumeLR(LRVolume value) {
     assert(_hWaveOut != null, 'Device not open');
     assert(supportsVolumeControl, 'Device does not support volume control.');
-    _throwOnError(() => waveOutSetVolume(_hWaveOut, value.volume32bit));
+    _throwOnError(() => waveOutSetVolume(_hWaveOut!, value.volume32bit));
   }
 
   // Pitch Control
@@ -332,7 +332,7 @@ class WaveOut {
     assert(_hWaveOut != null, 'Device not open');
     final result = calloc<Uint32>();
     try {
-      _throwOnError(() => waveOutGetPitch(_hWaveOut, result));
+      _throwOnError(() => waveOutGetPitch(_hWaveOut!, result));
       return _fixedToDouble(result.value);
     } finally {
       free(result);
@@ -342,7 +342,7 @@ class WaveOut {
   set pitch(double value) {
     assert(_hWaveOut != null, 'Device not open');
     assert(value >= 0, 'Cannot set pitch to negative value');
-    _throwOnError(() => waveOutSetPitch(_hWaveOut, _doubleToFixed(value)));
+    _throwOnError(() => waveOutSetPitch(_hWaveOut!, _doubleToFixed(value)));
   }
 
   // Playback Rate Control
@@ -351,7 +351,7 @@ class WaveOut {
     assert(_hWaveOut != null, 'Device not open');
     final result = calloc<Uint32>();
     try {
-      _throwOnError(() => waveOutGetPlaybackRate(_hWaveOut, result));
+      _throwOnError(() => waveOutGetPlaybackRate(_hWaveOut!, result));
       return _fixedToDouble(result.value);
     } finally {
       free(result);
@@ -361,17 +361,16 @@ class WaveOut {
   set playbackRate(double value) {
     assert(_hWaveOut != null, 'Device not open');
     assert(value >= 0, 'Cannot set playback rate to negative value');
-    _throwOnError(() => waveOutSetPlaybackRate(_hWaveOut, _doubleToFixed(value)));
+    _throwOnError(() => waveOutSetPlaybackRate(_hWaveOut!, _doubleToFixed(value)));
   }
 
   /// Get position in samples-per-channel
   int get position {
     assert(_hWaveOut != null, 'Device not open');
-    final result = calloc<MMTIME>()
-      ..ref.wType = TIME_SAMPLES;
+    final result = calloc<MMTIME>()..ref.wType = TIME_SAMPLES;
     try {
       _throwOnError(
-            () => waveOutGetPosition(_hWaveOut, result, sizeOf<MMTIME>()),
+        () => waveOutGetPosition(_hWaveOut!, result, sizeOf<MMTIME>()),
       );
       return result.ref.u.sample;
     } finally {
@@ -384,25 +383,25 @@ class WaveOut {
   /// Pause playback
   void pause() {
     assert(_hWaveOut != null, 'Device not open');
-    _throwOnError(() => waveOutPause(_hWaveOut));
+    _throwOnError(() => waveOutPause(_hWaveOut!));
   }
 
   /// Restart paused playback
   void restart() {
     assert(_hWaveOut != null, 'Device not open');
-    _throwOnError(() => waveOutRestart(_hWaveOut));
+    _throwOnError(() => waveOutRestart(_hWaveOut!));
   }
 
   /// Reset device
   /// Halt's all activity and generates a WOM_DONE message for all buffers in chain.
   void reset() {
     assert(_hWaveOut != null, 'Device not open');
-    _throwOnError(() => waveOutReset(_hWaveOut));
+    _throwOnError(() => waveOutReset(_hWaveOut!));
   }
 
   void breakLoop() {
     assert(_hWaveOut != null, 'Device not open');
-    _throwOnError(() => waveOutBreakLoop(_hWaveOut));
+    _throwOnError(() => waveOutBreakLoop(_hWaveOut!));
   }
 
   // Convert double to 32-bit (16.16) fixed-point
@@ -418,30 +417,29 @@ class WaveBuffer {
     _waveHdr.ref
       ..lpData = (calloc<Uint8>(_bufferSizeInBytes)).cast()
       ..dwUser = _index;
-    _bytesUsed = 0;
   }
 
   final WaveOut waveOut;
   final int _index;
   final int _bufferSizeInBytes;
-  Pointer<WAVEHDR> _waveHdr;
-  int _bytesUsed;
+  late Pointer<WAVEHDR> _waveHdr;
+  int _bytesUsed = 0;
 
-  int get _hDeviceOut => waveOut._hWaveOut;
+  int? get _hDeviceOut => waveOut._hWaveOut;
 
   bool get done => (_waveHdr.ref.dwFlags & WHDR_DONE) != 0;
 
   Future wait() {
     // FIXME
     return Future.doWhile(
-          () => Future.delayed(const Duration(milliseconds: 10), () => !done),
+      () => Future.delayed(const Duration(milliseconds: 10), () => !done),
     );
   }
 
   void dispose() {
     if ((_waveHdr.ref.dwFlags & WHDR_PREPARED) != 0) {
       _throwOnError(
-            () => waveOutUnprepareHeader(_hDeviceOut, _waveHdr, sizeOf<WAVEHDR>()),
+        () => waveOutUnprepareHeader(_hDeviceOut!, _waveHdr, sizeOf<WAVEHDR>()),
       );
     }
     free(_waveHdr.ref.lpData);
@@ -454,11 +452,11 @@ class WaveBuffer {
     _bytesUsed = 0;
     if ((_waveHdr.ref.dwFlags & WHDR_PREPARED) == 0) {
       _throwOnError(
-            () => waveOutPrepareHeader(_hDeviceOut, _waveHdr, sizeOf<WAVEHDR>()),
+        () => waveOutPrepareHeader(_hDeviceOut!, _waveHdr, sizeOf<WAVEHDR>()),
       );
     }
     _throwOnError(
-          () => waveOutWrite(_hDeviceOut, _waveHdr, sizeOf<WAVEHDR>()),
+      () => waveOutWrite(_hDeviceOut!, _waveHdr, sizeOf<WAVEHDR>()),
     );
   }
 
@@ -499,31 +497,32 @@ class LRVolume {
 }
 
 class SupportedWaveFormat {
-  static const formatPcm08kM08b   = SupportedWaveFormat(0x00000000, 8000, 1, 8);
-  static const formatPcm08kS08b   = SupportedWaveFormat(0x00000000, 8000, 2, 8);
-  static const formatPcm08kM16b   = SupportedWaveFormat(0x00000000, 8000, 1, 16);
-  static const formatPcm08kS16b   = SupportedWaveFormat(0x00000000, 8000, 2, 16);
-  static const formatPcm11kM08b   = SupportedWaveFormat(0x00000001, 11025, 1, 8);
-  static const formatPcm11kS08b   = SupportedWaveFormat(0x00000002, 11025, 2, 8);
-  static const formatPcm11kM16b   = SupportedWaveFormat(0x00000004, 11025, 1, 16);
-  static const formatPcm11kS16b   = SupportedWaveFormat(0x00000008, 11025, 2, 16);
-  static const formatPcm22kM08b   = SupportedWaveFormat(0x00000010, 22050, 1, 8);
-  static const formatPcm22kS08b   = SupportedWaveFormat(0x00000020, 22050, 2, 8);
-  static const formatPcm22kM16b   = SupportedWaveFormat(0x00000040, 22050, 1, 16);
-  static const formatPcm22kS16b   = SupportedWaveFormat(0x00000080, 22050, 2, 16);
-  static const formatPcm44kM08b   = SupportedWaveFormat(0x00000100, 44100, 1, 8);
-  static const formatPcm44kS08b   = SupportedWaveFormat(0x00000200, 44100, 2, 8);
-  static const formatPcm44kM16b   = SupportedWaveFormat(0x00000400, 44100, 1, 16);
-  static const formatPcm44kS16b   = SupportedWaveFormat(0x00000800, 44100, 2, 16);
-  static const formatPcm48kM08b   = SupportedWaveFormat(0x00001000, 48000, 1, 8);
-  static const formatPcm48kS08b   = SupportedWaveFormat(0x00002000, 48000, 2, 8);
-  static const formatPcm48kM16b   = SupportedWaveFormat(0x00004000, 48000, 1, 16);
-  static const formatPcm48kS16b   = SupportedWaveFormat(0x00008000, 48000, 2, 16);
-  static const formatPcm96kM08b   = SupportedWaveFormat(0x00010000, 96000, 1, 8);
-  static const formatPcm96kS08b   = SupportedWaveFormat(0x00020000, 96000, 2, 8);
-  static const formatPcm96kM16b   = SupportedWaveFormat(0x00040000, 96000, 1, 16);
-  static const formatPcm96kS16b   = SupportedWaveFormat(0x00080000, 96000, 2, 16);
-  static const formatFloat44kM32b = SupportedWaveFormat(0x00000000, 44100, 1, 32, WAVE_FORMAT_IEEE_FLOAT);
+  static const formatPcm08kM08b = SupportedWaveFormat(0x00000000, 8000, 1, 8);
+  static const formatPcm08kS08b = SupportedWaveFormat(0x00000000, 8000, 2, 8);
+  static const formatPcm08kM16b = SupportedWaveFormat(0x00000000, 8000, 1, 16);
+  static const formatPcm08kS16b = SupportedWaveFormat(0x00000000, 8000, 2, 16);
+  static const formatPcm11kM08b = SupportedWaveFormat(0x00000001, 11025, 1, 8);
+  static const formatPcm11kS08b = SupportedWaveFormat(0x00000002, 11025, 2, 8);
+  static const formatPcm11kM16b = SupportedWaveFormat(0x00000004, 11025, 1, 16);
+  static const formatPcm11kS16b = SupportedWaveFormat(0x00000008, 11025, 2, 16);
+  static const formatPcm22kM08b = SupportedWaveFormat(0x00000010, 22050, 1, 8);
+  static const formatPcm22kS08b = SupportedWaveFormat(0x00000020, 22050, 2, 8);
+  static const formatPcm22kM16b = SupportedWaveFormat(0x00000040, 22050, 1, 16);
+  static const formatPcm22kS16b = SupportedWaveFormat(0x00000080, 22050, 2, 16);
+  static const formatPcm44kM08b = SupportedWaveFormat(0x00000100, 44100, 1, 8);
+  static const formatPcm44kS08b = SupportedWaveFormat(0x00000200, 44100, 2, 8);
+  static const formatPcm44kM16b = SupportedWaveFormat(0x00000400, 44100, 1, 16);
+  static const formatPcm44kS16b = SupportedWaveFormat(0x00000800, 44100, 2, 16);
+  static const formatPcm48kM08b = SupportedWaveFormat(0x00001000, 48000, 1, 8);
+  static const formatPcm48kS08b = SupportedWaveFormat(0x00002000, 48000, 2, 8);
+  static const formatPcm48kM16b = SupportedWaveFormat(0x00004000, 48000, 1, 16);
+  static const formatPcm48kS16b = SupportedWaveFormat(0x00008000, 48000, 2, 16);
+  static const formatPcm96kM08b = SupportedWaveFormat(0x00010000, 96000, 1, 8);
+  static const formatPcm96kS08b = SupportedWaveFormat(0x00020000, 96000, 2, 8);
+  static const formatPcm96kM16b = SupportedWaveFormat(0x00040000, 96000, 1, 16);
+  static const formatPcm96kS16b = SupportedWaveFormat(0x00080000, 96000, 2, 16);
+  static const formatFloat44kM32b =
+      SupportedWaveFormat(0x00000000, 44100, 1, 32, WAVE_FORMAT_IEEE_FLOAT);
 
   const SupportedWaveFormat(this.id, this.sampleRate, this.channelCount, this.bitPerSample,
       [this.tag = WAVE_FORMAT_PCM]);

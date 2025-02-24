@@ -9,9 +9,9 @@ import 'package:pacman/win32_sound/win32_sound.dart';
 
 class Display extends StatefulWidget implements display.Display {
   const Display({
-    Key key,
-    @required this.emulator,
-  }) : super(key: key);
+    super.key,
+    required this.emulator,
+  });
 
   final ArcadeMachineEmu emulator;
 
@@ -21,12 +21,12 @@ class Display extends StatefulWidget implements display.Display {
 
 class _DisplayState extends display.DisplayState<Display> {
   final _video = Uint32List(VIDEO_WIDTH * VIDEO_HEIGHT);
-  final _frame = ValueNotifier<ui.Image>(null);
+  final _frame = ValueNotifier<ui.Image?>(null);
   final _audioFrame = Float32List(44100 ~/ 60);
 
   double _frameCount = 0.0;
   Duration _elapsed = Duration.zero;
-  Completer _completer;
+  Completer? _completer;
 
   double get fps => (_frameCount / (_elapsed.inMicroseconds / Duration.microsecondsPerSecond));
 
@@ -52,11 +52,14 @@ class _DisplayState extends display.DisplayState<Display> {
     _elapsed = elapsed;
     if (!widget.emulator.paused) {
       if (_completer?.isCompleted ?? true) {
-        _completer = Completer();
-        _render().then((_) {
-          _completer.complete();
-          _frameCount++;
-        }).catchError(_completer.completeError);
+        final completer = _completer = Completer();
+        _render().then(
+          (_) {
+            completer.complete();
+            _frameCount++;
+          },
+          onError: completer.completeError,
+        );
       }
     } else {
       _frameCount++;
@@ -81,9 +84,9 @@ class _DisplayState extends display.DisplayState<Display> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ui.Image>(
+    return ValueListenableBuilder<ui.Image?>(
       valueListenable: _frame,
-      builder: (BuildContext context, ui.Image image, Widget child) {
+      builder: (BuildContext context, ui.Image? image, Widget? child) {
         return Stack(
           children: [
             if (image != null)
@@ -107,10 +110,7 @@ class _DisplayState extends display.DisplayState<Display> {
                     fps.toStringAsFixed(2),
                     style: const TextStyle(
                       fontSize: 16.0,
-                      color: Colors.black,
-                      //shadows: <Shadow>[
-                      //  Shadow(offset: Offset(2.0, 2.0), blurRadius: 3.0),
-                      //],
+                      color: Colors.red,
                     ),
                   ),
                 ),

@@ -1,40 +1,40 @@
 import 'dart:ffi';
 
 @Packed(1)
-class MPEGLAYER3WAVEFORMAT extends Struct {
+final class MPEGLAYER3WAVEFORMAT extends Struct {
   @Uint16()
-  int wFormatTag;
+  external int wFormatTag;
 
   @Uint16()
-  int nChannels;
+  external int nChannels;
 
   @Uint32()
-  int nSamplesPerSec;
+  external int nSamplesPerSec;
 
   @Uint32()
-  int nAvgBytesPerSec;
+  external int nAvgBytesPerSec;
 
   @Uint16()
-  int nBlockAlign;
+  external int nBlockAlign;
 
   @Uint16()
-  int wBitsPerSample;
+  external int wBitsPerSample;
 
   @Uint16()
-  int cbSize;
+  external int cbSize;
 
   @Uint16()
-  int wID;
+  external int wID;
 
   @Uint32()
-  int fdwFlags;
+  external int fdwFlags;
 
   @Uint16()
-  int nBlockSize;
+  external int nBlockSize;
 
   @Uint16()
-  int nFramesPerBlock;
+  external int nFramesPerBlock;
 
   @Uint16()
-  int nCodecDelay;
+  external int nCodecDelay;
 }

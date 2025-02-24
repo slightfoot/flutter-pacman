@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderErrorBox;
 import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/services.dart';
 import 'package:pacman/assets.dart';
@@ -13,7 +16,7 @@ void main() {
 }
 
 class App extends StatelessWidget {
-  const App({Key key}) : super(key: key);
+  const App({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,21 +39,21 @@ class App extends StatelessWidget {
 
 @immutable
 class Game extends StatefulWidget {
-  const Game({Key key}) : super(key: key);
+  const Game({super.key});
 
   @override
-  _GameState createState() => _GameState();
+  State<Game> createState() => _GameState();
 }
 
 class _GameState extends State<Game> with SingleTickerProviderStateMixin {
   final _displayKey = GlobalKey<DisplayState>();
   bool _loaded = false;
   bool _started = false;
-  ArcadeMachineEmu _emulator;
-  Future<void> _loading;
-  FocusNode _focusNode;
-  Ticker _ticker;
-  Duration _last;
+  late ArcadeMachineEmu _emulator;
+  late Future<void> _loading;
+  late FocusNode _focusNode;
+  late Ticker _ticker;
+  Duration? _last;
 
   @override
   void initState() {
@@ -74,8 +77,10 @@ class _GameState extends State<Game> with SingleTickerProviderStateMixin {
     final delta = elapsed - (_last ?? elapsed);
     if (delta > Duration.zero) {
       _emulator.tick();
-      _displayKey.currentState.outputVideoFrame(elapsed, delta);
-      _displayKey.currentState.outputAudioFrame(elapsed, delta);
+      _displayKey.currentState!.outputVideoFrame(elapsed, delta);
+      if (!_emulator.paused) {
+        _displayKey.currentState!.outputAudioFrame(elapsed, delta);
+      }
     }
     _last = elapsed;
   }
